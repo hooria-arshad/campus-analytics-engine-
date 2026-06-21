@@ -9,7 +9,6 @@
 #include "reports.h"
 using namespace std;
 
-// clears a bad cin state and discards the rest of the line
 static void clearInput() {
     cin.clear();
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -44,15 +43,12 @@ static string readLine(const string &prompt) {
     return value;
 }
 
-// ---------------- LEVEL 3 menus ----------------
-
 void studentMenu() {
     int choice;
     do {
         cout << "\n----- STUDENT MANAGEMENT -----\n";
-        cout << "1. Add Student\n2. Search by Roll\n3. Search by Name\n";
-        cout << "4. Update Student\n5. Soft Delete Student\n6. List Active Students\n";
-        cout << "7. Search As You Type (BONUS)\n0. Back\n";
+        cout << "1. Add Student\n2. Search by Roll\n3. Search by Name (type live)\n";
+        cout << "4. Update Student\n5. Soft Delete Student\n6. List Active Students\n0. Back\n";
         choice = readInt("Choice: ");
 
         if (choice == 1) {
@@ -68,10 +64,7 @@ void studentMenu() {
             if (row.empty()) cout << "Not found.\n";
             else cout << row[0] << " | " << row[1] << " | " << row[2] << " | " << row[4] << " | " << row[5] << "\n";
         } else if (choice == 3) {
-            string name = readLine("Name contains: ");
-            vector<vector<string> > rows = searchByName(name);
-            for (size_t i = 0; i < rows.size(); i++)
-                cout << rows[i][0] << " | " << rows[i][1] << "\n";
+            searchByName(); // live filtering happens inside this call
         } else if (choice == 4) {
             string roll = readLine("Roll: ");
             cout << "Fields: 1=name 2=dept 3=semester 4=cgpa 5=status\n";
@@ -87,8 +80,6 @@ void studentMenu() {
             vector<vector<string> > rows = listActiveStudents();
             for (size_t i = 0; i < rows.size(); i++)
                 cout << rows[i][0] << " | " << rows[i][1] << " | CGPA " << rows[i][4] << "\n";
-        } else if (choice == 7) {
-            searchAsYouType();
         }
     } while (choice != 0);
 }
@@ -119,8 +110,7 @@ void courseMenu() {
         } else if (choice == 4) {
             string code = readLine("Course Code: ");
             vector<vector<string> > rows = listEnrolledStudents(code);
-            for (size_t i = 0; i < rows.size(); i++)
-                cout << rows[i][EN_ROLL] << "\n";
+            for (size_t i = 0; i < rows.size(); i++) cout << rows[i][EN_ROLL] << "\n";
         }
     } while (choice != 0);
 }
@@ -239,8 +229,6 @@ void reportsMenu() {
         }
     } while (choice != 0);
 }
-
-// ---------------- LEVEL 1: main menu ----------------
 
 int main() {
     int choice;
