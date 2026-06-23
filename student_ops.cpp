@@ -141,7 +141,7 @@ vector<vector<string> > listActiveStudents() {
     return active;
 }
 
-// ---------------- Search By Name (search as you type) ----------------
+// ---------------- live-typing helpers (the bonus feature) ----------------
 
 // turns one character to uppercase manually, no <cctype> needed
 static char toUpperChar(char c) {
@@ -171,8 +171,9 @@ static vector<vector<string> > filterStudentsByPrefix(const string &prefix) {
     return matches;
 }
 
-static void printMatches(const string &prefix, const vector<vector<string> > &matches) {
-    cout << "\nSearch by Name (type to filter live): \"" << prefix << "\"\n";
+static void printMatches(const string &label, const string &prefix,
+                          const vector<vector<string> > &matches) {
+    cout << "\n" << label << " (type live): \"" << prefix << "\"\n";
     cout << "(Backspace = delete, Enter = finish, Esc = cancel)\n";
     cout << "------------------------------------------------------------\n";
     if (matches.empty()) {
@@ -200,40 +201,86 @@ static int getCharRaw() {
 }
 #endif
 
-// this IS the "search by name" feature - it filters live as you type,
-// one character at a time, instead of asking for a full name first
+static int readOneChar() {
+#ifdef _WIN32
+    return _getch();
+#else
+    return getCharRaw();
+#endif
+}
+
+// generic live-typing loop used by both liveTypeRoll() and getNewStudentRoll().
+// Returns the text typed when Enter is pressed, or "" if Esc is pressed.
+static string liveTypeLoop(const string &label) {
+    string prefix = "";
+    printMatches(label, prefix, filterStudentsByPrefix(prefix));
+
+    while (true) {
+        int ch = readOneChar();
+
+        if (ch == 13 || ch == 10) return prefix;  // Enter
+        if (ch == 27) return "";                   // Esc cancels
+
+        if (ch == 8 || ch == 127) {                 // Backspace
+            if (!prefix.empty()) prefix = prefix.substr(0, prefix.length() - 1);
+        } else if (ch >= 32 && ch <= 126) {          // printable character
+            prefix += (char)ch;
+        } else {
+            continue;
+        }
+
+        printMatches(label, prefix, filterStudentsByPrefix(prefix));
+    }
+}
+
+// used in Search by Roll / Update / Delete / Enroll / Attendance / Grades /
+// Fees / Reports - just types live and returns whatever was typed
+string liveTypeRoll(const string &label) {
+    return liveTypeLoop(label);
+}
+
+// used ONLY when adding a new student - loops until a non-duplicate,
+// correctly-formatted roll is given (or the user cancels with Esc)
+string getNewStudentRoll() {
+    while (true) {
+        string roll = liveTypeLoop("New Roll (BSAI-YY-XXX)");
+
+        if (roll.empty()) return ""; // user cancelled
+
+        if (studentExists(roll)) {
+            cout << "\n*** Error: roll " << roll << " already exists. Please type a different roll. ***\n";
+            continue; // ask again
+        }
+        if (!isValidRollFormat(roll)) {
+            cout << "\n*** Error: roll must look like BSAI-YY-XXX (e.g. BSAI-23-031). Try again. ***\n";
+            continue; // ask again
+        }
+        return roll; // valid and unique
+    }
+}
+
+// Search by Name menu option - same live filtering, just for browsing
 vector<vector<string> > searchByName() {
     string prefix = "";
     vector<vector<string> > matches = filterStudentsByPrefix(prefix);
-    printMatches(prefix, matches);
+    printMatches("Search by Name", prefix, matches);
 
     while (true) {
-#ifdef _WIN32
-        int ch = _getch();
-#else
-        int ch = getCharRaw();
-#endif
+        int ch = readOneChar();
 
-        if (ch == 13 || ch == 10) { // Enter finishes the search
-            cout << "\nSearch finished.\n";
-            break;
-        }
-        if (ch == 27) { // Esc cancels
-            cout << "\nSearch cancelled.\n";
-            prefix = "";
-            matches = filterStudentsByPrefix(prefix);
-            break;
-        }
-        if (ch == 8 || ch == 127) { // Backspace
+        if (ch == 13 || ch == 10) { cout << "\nSearch finished.\n"; break; }
+        if (ch == 27) { cout << "\nSearch cancelled.\n"; prefix = ""; matches = filterStudentsByPrefix(prefix); break; }
+
+        if (ch == 8 || ch == 127) {
             if (!prefix.empty()) prefix = prefix.substr(0, prefix.length() - 1);
-        } else if (ch >= 32 && ch <= 126) { // any normal printable character
+        } else if (ch >= 32 && ch <= 126) {
             prefix += (char)ch;
         } else {
-            continue; // ignore arrow keys etc.
+            continue;
         }
 
         matches = filterStudentsByPrefix(prefix);
-        printMatches(prefix, matches);
+        printMatches("Search by Name", prefix, matches);
     }
     return matches;
 }
